@@ -109,38 +109,48 @@
         }
 
         .note-card {
-    position: relative;
-    min-height: 220px;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    cursor: pointer;
-    overflow: hidden;
-    transform-style: preserve-3d;
+            position: relative;
+            min-height: 220px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            overflow: hidden;
+            perspective: 1000px;
+        }
 
-    /* Default transform dynamic */
-    --card-transform: rotateY(0deg);
-    transform: var(--card-transform);
-    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
+        .note-card:hover {
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
 
-.note-card.flipped {
-    --card-transform: rotateY(180deg);
-}
+        .note-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-style: preserve-3d;
+            min-height: 220px;
+        }
 
-.note-card:hover {
-    transform: var(--card-transform) translateY(-5px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-}
-
+        .note-inner.flipped {
+            transform: rotateY(180deg);
+        }
 
         .note-front {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            padding: 30px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             z-index: 2;
-            transform: rotateY(0deg);
         }
 
         .note-front-content {
             text-align: center;
-            opacity: 0.7;
+            opacity: 0.8;
         }
 
         .note-front-title {
@@ -157,11 +167,17 @@
         }
 
         .note-back {
-            transform: rotateY(180deg);
-            position: relative;
-            overflow-y: auto;
-            -webkit-backface-visibility: hidden;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            padding: 30px 20px;
             backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            transform: rotateY(180deg);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            z-index: 1;
         }
 
         .note-question {
@@ -173,17 +189,15 @@
             text-align: left;
             width: 100%;
             margin-bottom: 30px;
+            flex-grow: 1;
         }
 
         .note-timestamp {
-            position: absolute;
-            bottom: 10px;
-            left: 0;
-            right: 0;
             text-align: center;
             font-size: 11px;
             color: rgba(0, 0, 0, 0.5);
             font-style: italic;
+            margin-top: auto;
         }
 
         .close-btn {
@@ -203,6 +217,7 @@
             font-size: 20px;
             transition: all 0.3s;
             z-index: 10;
+            padding: 0;
         }
 
         .close-btn:hover {
@@ -227,6 +242,7 @@
             font-size: 18px;
             transition: all 0.3s;
             z-index: 5;
+            padding: 0;
         }
 
         .delete-btn:hover {
@@ -235,21 +251,21 @@
         }
 
         /* Random ranglar */
-        .random-color-1 { background-color: #FEFF9C; } /* Sariq */
-        .random-color-2 { background-color: #FF7EB9; } /* Pushti */
-        .random-color-3 { background-color: #7AFCFF; } /* Moviy */
-        .random-color-4 { background-color: #FFC09F; } /* To'q sariq */
-        .random-color-5 { background-color: #AEC6CF; } /* Kulrang moviy */
-        .random-color-6 { background-color: #B5EAD7; } /* Yashil */
-        .random-color-7 { background-color: #E0BBE4; } /* Binafsha */
-        .random-color-8 { background-color: #FFDFD3; } /* Shaftoli */
-        .random-color-9 { background-color: #FF9A8B; } /* Korall */
-        .random-color-10 { background-color: #9BD1F2; } /* Och moviy */
-        .random-color-11 { background-color: #C4F0C7; } /* Och yashil */
-        .random-color-12 { background-color: #F5D0C4; } /* Bej */
-        .random-color-13 { background-color: #D4A5E9; } /* Och binafsha */
-        .random-color-14 { background-color: #FFD166; } /* Qizg'ish sariq */
-        .random-color-15 { background-color: #8AC6E6; } /* Havo rang */
+        .random-color-1 { background-color: #FEFF9C; }
+        .random-color-2 { background-color: #FF7EB9; }
+        .random-color-3 { background-color: #7AFCFF; }
+        .random-color-4 { background-color: #FFC09F; }
+        .random-color-5 { background-color: #AEC6CF; }
+        .random-color-6 { background-color: #B5EAD7; }
+        .random-color-7 { background-color: #E0BBE4; }
+        .random-color-8 { background-color: #FFDFD3; }
+        .random-color-9 { background-color: #FF9A8B; }
+        .random-color-10 { background-color: #9BD1F2; }
+        .random-color-11 { background-color: #C4F0C7; }
+        .random-color-12 { background-color: #F5D0C4; }
+        .random-color-13 { background-color: #D4A5E9; }
+        .random-color-14 { background-color: #FFD166; }
+        .random-color-15 { background-color: #8AC6E6; }
 
         .error-message {
             background: #fee;
@@ -317,7 +333,6 @@
         let expandedNoteId = null;
         const noteColors = {};
 
-        // Ko'p ranglar ro'yxati
         const colorClasses = [
             'random-color-1', 'random-color-2', 'random-color-3', 'random-color-4',
             'random-color-5', 'random-color-6', 'random-color-7', 'random-color-8',
@@ -330,7 +345,6 @@
         }
 
         function getNoteColorClass(noteId) {
-            // Har bir note uchun doimiy random rang beramiz
             if (!noteColors[noteId]) {
                 noteColors[noteId] = getRandomColorClass();
             }
@@ -349,25 +363,23 @@
         }
 
         function toggleNote(noteId) {
-    const noteCard = document.querySelector(`[data-note-id="${noteId}"]`);
-    const noteInner = noteCard.querySelector('.note-inner'); // 🔥 MUHIM
+            const noteCard = document.querySelector(`[data-note-id="${noteId}"]`);
+            const noteInner = noteCard.querySelector('.note-inner');
 
-    if (expandedNoteId === noteId) {
-        expandedNoteId = null;
-        noteInner.classList.remove('flipped'); // 🔥 note-inner ga qo‘llanadi
-    } else {
-        // Oldingi ochilganini yopish
-        if (expandedNoteId) {
-            const prevCard = document.querySelector(`[data-note-id="${expandedNoteId}"]`);
-            const prevInner = prevCard?.querySelector('.note-inner');
-            prevInner?.classList.remove('flipped');
+            if (expandedNoteId === noteId) {
+                expandedNoteId = null;
+                noteInner.classList.remove('flipped');
+            } else {
+                if (expandedNoteId) {
+                    const prevCard = document.querySelector(`[data-note-id="${expandedNoteId}"]`);
+                    const prevInner = prevCard?.querySelector('.note-inner');
+                    prevInner?.classList.remove('flipped');
+                }
+
+                expandedNoteId = noteId;
+                noteInner.classList.add('flipped');
+            }
         }
-
-        expandedNoteId = noteId;
-        noteInner.classList.add('flipped'); // 🔥 aynan note-inner!
-    }
-    }
-
 
         async function deleteNote(event, noteId) {
             event.stopPropagation();
@@ -407,41 +419,29 @@
                 const noteColor = getNoteColorClass(note.id);
                 
                 return `
-    <div class="note-card ${noteColor}" 
-         data-note-id="${note.id}"
-         onclick="if(!event.target.closest('.close-btn') && !event.target.closest('.delete-btn')) toggleNote(${note.id})">
-        
-        <div class="note-top">
-            <div class="note-petal"></div>
-            <div class="note-petal"></div>
-            <div class="note-petal"></div>
-        </div>
+                    <div class="note-card ${noteColor}" 
+                         data-note-id="${note.id}"
+                         onclick="if(!event.target.closest('.close-btn') && !event.target.closest('.delete-btn')) toggleNote(${note.id})">
+                        
+                        <div class="note-inner">
+                            <!-- Old tomoni -->
+                            <div class="note-front">
+                                <div class="note-front-content">
+                                    <div class="note-front-title">???</div>
+                                    <div class="note-front-hint">Savolni ko'rish uchun bosing</div>
+                                </div>
+                            </div>
 
-        <!-- 🔥 NOTE-INNER qo'shildi -->
-        <div class="note-inner">
-
-            <!-- Old tomoni -->
-            <div class="note-front">
-                <div class="note-front-content">
-                    <div class="note-front-title">???</div>
-                    <div class="note-front-hint">Savolni ko'rish uchun bosing</div>
-                </div>
-            </div>
-
-            <!-- Orqa tomoni -->
-            <div class="note-back">
-                <button class="close-btn" onclick="toggleNote(${note.id})">×</button>
-                <div class="note-question">${escapeHtml(note.question)}</div>
-                <span class="note-timestamp">${formatDate(note.created_at || note.timestamp)}</span>
-                <button class="delete-btn" onclick="deleteNote(event, ${note.id})">×</button>
-            </div>
-
-        </div>
-        <!-- 🔥 note-inner tugadi -->
-
-    </div>
-    `;
-
+                            <!-- Orqa tomoni -->
+                            <div class="note-back">
+                                <button class="close-btn" onclick="toggleNote(${note.id})">×</button>
+                                <div class="note-question">${escapeHtml(note.question)}</div>
+                                <span class="note-timestamp">${formatDate(note.created_at || note.timestamp)}</span>
+                                <button class="delete-btn" onclick="deleteNote(event, ${note.id})">×</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
             }).join('');
         }
 
@@ -487,10 +487,7 @@
             }
         }
 
-        // Sahifa yuklanganda ma'lumotlarni olish
         document.addEventListener('DOMContentLoaded', loadNotes);
-
-        // Har 30 sekundda avtomatik yangilash
         setInterval(loadNotes, 30000);
     </script>
 </body>
