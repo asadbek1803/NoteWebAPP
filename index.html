@@ -120,7 +120,7 @@
         }
 
         .note-card:hover {
-            transform: translateY(-5px) rotate(1deg);
+            transform: translateY(-5px);
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
         }
 
@@ -157,13 +157,15 @@
             line-height: 1.6;
             color: #333;
             word-wrap: break-word;
+            transition: all 0.3s ease;
         }
 
         .note-question.collapsed {
             display: -webkit-box;
-            -webkit-line-clamp: 5;
+            -webkit-line-clamp: 4;
             -webkit-box-orient: vertical;
             overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .note-timestamp {
@@ -191,6 +193,7 @@
             justify-content: center;
             font-size: 18px;
             transition: all 0.3s;
+            z-index: 5;
         }
 
         .note-card.expanded .delete-btn {
@@ -200,6 +203,20 @@
         .delete-btn:hover {
             background: #dc2626;
             transform: scale(1.1);
+        }
+
+        .expand-indicator {
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            color: rgba(0, 0, 0, 0.3);
+            transition: all 0.3s;
+        }
+
+        .note-card.expanded .expand-indicator {
+            transform: translateX(-50%) rotate(180deg);
         }
 
         /* Ranglar */
@@ -274,8 +291,9 @@
     </div>
 
     <script>
-        const API_URL = 'https://fastapi-production-db32.up.railway.app/api/notes'; // FastAPI URL'ini o'zgartiring
+        const API_URL = 'https://noteapp-uz.netlify.app/api/notes';
         let expandedNoteId = null;
+        const noteColors = {}; // Har bir note uchun rangni saqlash
 
         const colors = [
             'color-yellow', 'color-pink', 'color-cyan', 'color-orange',
@@ -284,6 +302,13 @@
 
         function getRandomColor() {
             return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function getNoteColor(noteId) {
+            if (!noteColors[noteId]) {
+                noteColors[noteId] = getRandomColor();
+            }
+            return noteColors[noteId];
         }
 
         function formatDate(dateString) {
@@ -335,6 +360,7 @@
                 });
 
                 if (response.ok) {
+                    delete noteColors[noteId];
                     loadNotes();
                 } else {
                     showError('Savolni o\'chirishda xatolik yuz berdi');
@@ -355,22 +381,26 @@
 
             document.getElementById('empty-state').style.display = 'none';
             
-            container.innerHTML = notes.map(note => `
-                <div class="note-card ${note.color || getRandomColor()}" 
-                     data-note-id="${note.id}"
-                     onclick="toggleNote(${note.id})">
-                    <div class="note-top">
-                        <div class="note-petal"></div>
-                        <div class="note-petal"></div>
-                        <div class="note-petal"></div>
+            container.innerHTML = notes.map(note => {
+                const noteColor = getNoteColor(note.id);
+                return `
+                    <div class="note-card ${noteColor}" 
+                         data-note-id="${note.id}"
+                         onclick="toggleNote(${note.id})">
+                        <div class="note-top">
+                            <div class="note-petal"></div>
+                            <div class="note-petal"></div>
+                            <div class="note-petal"></div>
+                        </div>
+                        <button class="delete-btn" onclick="deleteNote(event, ${note.id})">×</button>
+                        <div class="note-content">
+                            <p class="note-question collapsed">${escapeHtml(note.question)}</p>
+                            <span class="note-timestamp">${formatDate(note.created_at || note.timestamp)}</span>
+                            <div class="expand-indicator">▼</div>
+                        </div>
                     </div>
-                    <button class="delete-btn" onclick="deleteNote(event, ${note.id})">×</button>
-                    <div class="note-content">
-                        <p class="note-question collapsed">${escapeHtml(note.question)}</p>
-                        <span class="note-timestamp">${formatDate(note.created_at || note.timestamp)}</span>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function escapeHtml(text) {
