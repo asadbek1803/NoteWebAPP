@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post-it Savollar</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            background: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 32px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .icon {
+            width: 40px;
+            height: 40px;
+        }
+
+        .refresh-btn {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: #4f46e5;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #6366f1;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #666;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .notes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 30px;
+            padding: 20px 0;
+        }
+
+        .note-card {
+            position: relative;
+            min-height: 220px;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .note-card:hover {
+            transform: translateY(-5px) rotate(1deg);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .note-card.expanded {
+            transform: scale(1.05);
+            z-index: 10;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .note-top {
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 3px;
+        }
+
+        .note-petal {
+            width: 14px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+        }
+
+        .note-content {
+            position: relative;
+            height: 100%;
+        }
+
+        .note-question {
+            font-family: 'Comic Sans MS', cursive;
+            font-size: 18px;
+            line-height: 1.6;
+            color: #333;
+            word-wrap: break-word;
+        }
+
+        .note-question.collapsed {
+            display: -webkit-box;
+            -webkit-line-clamp: 5;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .note-timestamp {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            font-size: 11px;
+            color: rgba(0, 0, 0, 0.5);
+            font-style: italic;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 32px;
+            height: 32px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.3s;
+        }
+
+        .note-card.expanded .delete-btn {
+            display: flex;
+        }
+
+        .delete-btn:hover {
+            background: #dc2626;
+            transform: scale(1.1);
+        }
+
+        /* Ranglar */
+        .color-yellow { background-color: #FEFF9C; }
+        .color-pink { background-color: #FF7EB9; }
+        .color-cyan { background-color: #7AFCFF; }
+        .color-orange { background-color: #FFC09F; }
+        .color-blue { background-color: #AEC6CF; }
+        .color-green { background-color: #B5EAD7; }
+        .color-lavender { background-color: #E0BBE4; }
+        .color-peach { background-color: #FFDFD3; }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .notes-grid {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                Post-it Savollar
+            </h1>
+            <button class="refresh-btn" onclick="loadNotes()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                </svg>
+                Yangilash
+            </button>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Yuklanmoqda...</p>
+        </div>
+
+        <div id="error" class="error-message" style="display: none;"></div>
+
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <h2>Hozircha savollar yo'q</h2>
+            <p>Telegram bot orqali savol qo'shing</p>
+        </div>
+
+        <div id="notes-container" class="notes-grid"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api/notes'; // FastAPI URL'ini o'zgartiring
+        let expandedNoteId = null;
+
+        const colors = [
+            'color-yellow', 'color-pink', 'color-cyan', 'color-orange',
+            'color-blue', 'color-green', 'color-lavender', 'color-peach'
+        ];
+
+        function getRandomColor() {
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('uz-UZ', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function toggleNote(noteId) {
+            const noteCard = document.querySelector(`[data-note-id="${noteId}"]`);
+            const question = noteCard.querySelector('.note-question');
+            
+            if (expandedNoteId === noteId) {
+                // Yopish
+                expandedNoteId = null;
+                noteCard.classList.remove('expanded');
+                question.classList.add('collapsed');
+            } else {
+                // Oldingi ochilgan note'ni yopish
+                if (expandedNoteId) {
+                    const prevCard = document.querySelector(`[data-note-id="${expandedNoteId}"]`);
+                    if (prevCard) {
+                        prevCard.classList.remove('expanded');
+                        prevCard.querySelector('.note-question').classList.add('collapsed');
+                    }
+                }
+                // Yangi note'ni ochish
+                expandedNoteId = noteId;
+                noteCard.classList.add('expanded');
+                question.classList.remove('collapsed');
+            }
+        }
+
+        async function deleteNote(event, noteId) {
+            event.stopPropagation();
+            
+            if (!confirm('Bu savolni o\'chirmoqchimisiz?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/${noteId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    loadNotes();
+                } else {
+                    showError('Savolni o\'chirishda xatolik yuz berdi');
+                }
+            } catch (error) {
+                showError('Serverga ulanishda xatolik: ' + error.message);
+            }
+        }
+
+        function renderNotes(notes) {
+            const container = document.getElementById('notes-container');
+            
+            if (notes.length === 0) {
+                container.innerHTML = '';
+                document.getElementById('empty-state').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('empty-state').style.display = 'none';
+            
+            container.innerHTML = notes.map(note => `
+                <div class="note-card ${note.color || getRandomColor()}" 
+                     data-note-id="${note.id}"
+                     onclick="toggleNote(${note.id})">
+                    <div class="note-top">
+                        <div class="note-petal"></div>
+                        <div class="note-petal"></div>
+                        <div class="note-petal"></div>
+                    </div>
+                    <button class="delete-btn" onclick="deleteNote(event, ${note.id})">×</button>
+                    <div class="note-content">
+                        <p class="note-question collapsed">${escapeHtml(note.question)}</p>
+                        <span class="note-timestamp">${formatDate(note.created_at || note.timestamp)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        async function loadNotes() {
+            showLoading(true);
+            document.getElementById('error').style.display = 'none';
+            
+            try {
+                const response = await fetch(API_URL);
+                
+                if (!response.ok) {
+                    throw new Error('Serverdan ma\'lumot olishda xatolik');
+                }
+                
+                const notes = await response.json();
+                renderNotes(notes);
+            } catch (error) {
+                console.error('Xatolik:', error);
+                showError('Serverga ulanishda xatolik: ' + error.message);
+                document.getElementById('notes-container').innerHTML = '';
+                document.getElementById('empty-state').style.display = 'none';
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Sahifa yuklanganda ma'lumotlarni olish
+        document.addEventListener('DOMContentLoaded', loadNotes);
+
+        // Har 30 sekundda avtomatik yangilash
+        setInterval(loadNotes, 30000);
+    </script>
+</body>
+</html>
