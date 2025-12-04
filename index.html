@@ -67,6 +67,99 @@
             box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
         }
 
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 40px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-content h2 {
+            margin-bottom: 25px;
+            color: #333;
+            text-align: center;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .modal-content input:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .modal-btn-submit {
+            background: #6366f1;
+            color: white;
+        }
+
+        .modal-btn-submit:hover {
+            background: #4f46e5;
+        }
+
+        .modal-btn-cancel {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .modal-btn-cancel:hover {
+            background: #d0d0d0;
+        }
+
         .loading {
             text-align: center;
             padding: 60px 20px;
@@ -276,6 +369,13 @@
             text-align: center;
         }
 
+        .modal-error {
+            color: #c33;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -290,6 +390,10 @@
                 grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
                 gap: 20px;
             }
+
+            .modal-content {
+                width: 95%;
+            }
         }
     </style>
 </head>
@@ -300,7 +404,7 @@
                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                 </svg>
-                Post-it Savollar &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Izomova Marjona Tomonidan tuzildi  
+                Post-it Savollar
             </h1>
             <button class="refresh-btn" onclick="loadNotes()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -308,6 +412,19 @@
                 </svg>
                 Yangilash
             </button>
+        </div>
+
+        <!-- Parol Modal -->
+        <div id="passwordModal" class="modal">
+            <div class="modal-content">
+                <h2>🔐 Parol Kiriting</h2>
+                <div id="modalError" class="modal-error" style="display: none;"></div>
+                <input type="password" id="passwordInput" placeholder="Paroli kiriting..." onkeypress="if(event.key==='Enter') checkPassword()">
+                <div class="modal-buttons">
+                    <button class="modal-btn modal-btn-submit" onclick="checkPassword()">Kirish</button>
+                    <button class="modal-btn modal-btn-cancel" onclick="closePasswordModal()">Bekor qilish</button>
+                </div>
+            </div>
         </div>
 
         <div id="loading" class="loading" style="display: none;">
@@ -330,8 +447,9 @@
 
     <script>
         const API_URL = 'https://fastapi-production-db32.up.railway.app/api/notes';
+        let authPassword = null;
         const noteColors = {};
-        const openNotes = new Set(); // Ochilgan cardlarni saqlash
+        const openNotes = new Set();
 
         const colorClasses = [
             'random-color-1', 'random-color-2', 'random-color-3', 'random-color-4',
@@ -362,6 +480,53 @@
             });
         }
 
+        function showPasswordModal() {
+            document.getElementById('passwordModal').style.display = 'block';
+            document.getElementById('passwordInput').focus();
+            document.getElementById('modalError').style.display = 'none';
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').style.display = 'none';
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('modalError').style.display = 'none';
+        }
+
+        async function checkPassword() {
+            const password = document.getElementById('passwordInput').value;
+            
+            if (!password) {
+                showModalError('Paroli kiriting!');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL.replace('/notes', '')}/check-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password })
+                });
+
+                if (response.ok) {
+                    authPassword = password;
+                    closePasswordModal();
+                    loadNotes();
+                } else {
+                    showModalError('❌ Parol noto\'g\'ri!');
+                }
+            } catch (error) {
+                showModalError('Xatolik: ' + error.message);
+            }
+        }
+
+        function showModalError(message) {
+            const errorDiv = document.getElementById('modalError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
         function toggleNote(noteId) {
             const noteCard = document.querySelector(`[data-note-id="${noteId}"]`);
             const noteInner = noteCard.querySelector('.note-inner');
@@ -383,7 +548,7 @@
             }
 
             try {
-                const response = await fetch(`${API_URL}/${noteId}`, {
+                const response = await fetch(`${API_URL}/${noteId}?password=${encodeURIComponent(authPassword)}`, {
                     method: 'DELETE'
                 });
 
@@ -420,7 +585,6 @@
                          onclick="if(!event.target.closest('.close-btn') && !event.target.closest('.delete-btn')) toggleNote(${note.id})">
                         
                         <div class="note-inner ${isOpen ? 'flipped' : ''}">
-                            <!-- Old tomoni -->
                             <div class="note-front">
                                 <div class="note-front-content">
                                     <div class="note-front-title">???</div>
@@ -428,11 +592,10 @@
                                 </div>
                             </div>
 
-                            <!-- Orqa tomoni -->
                             <div class="note-back">
                                 <button class="close-btn" onclick="toggleNote(${note.id}); event.stopPropagation();">×</button>
                                 <div class="note-question">${escapeHtml(note.question)}</div>
-                                <span class="note-timestamp">${formatDate(note.created_at || note.timestamp)}</span>
+                                <span class="note-timestamp">${formatDate(note.created_at)}</span>
                                 <button class="delete-btn" onclick="deleteNote(event, ${note.id})">×</button>
                             </div>
                         </div>
@@ -461,11 +624,23 @@
         }
 
         async function loadNotes() {
+            if (!authPassword) {
+                showPasswordModal();
+                return;
+            }
+
             showLoading(true);
             document.getElementById('error').style.display = 'none';
             
             try {
-                const response = await fetch(API_URL);
+                const response = await fetch(`${API_URL}?password=${encodeURIComponent(authPassword)}`);
+                
+                if (response.status === 401) {
+                    authPassword = null;
+                    showPasswordModal();
+                    showLoading(false);
+                    return;
+                }
                 
                 if (!response.ok) {
                     throw new Error('Serverdan ma\'lumot olishda xatolik');
@@ -484,7 +659,18 @@
         }
 
         document.addEventListener('DOMContentLoaded', loadNotes);
-        setInterval(loadNotes, 30000);
+        setInterval(() => {
+            if (authPassword) {
+                loadNotes();
+            }
+        }, 30000);
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('passwordModal');
+            if (event.target == modal) {
+                closePasswordModal();
+            }
+        }
     </script>
 </body>
 </html>

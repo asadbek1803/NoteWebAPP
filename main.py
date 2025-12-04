@@ -16,7 +16,8 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # ==================== SOZLAMALAR ====================
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "DEFAULT_TOKEN")  # @BotFather'dan token
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "DEFAULT_TOKEN")
+SECRET_PASSWORD = os.getenv("SECRET_PASSWORD", "12345")  # Parol
 DB_NAME = "notes.db"
 FASTAPI_PORT = 8000
 
@@ -64,6 +65,9 @@ class NoteResponse(BaseModel):
     color: str
     telegram_user_id: Optional[int] = None
     telegram_username: Optional[str] = None
+
+class PasswordCheck(BaseModel):
+    password: str
 
 # ==================== TELEGRAM BOT ====================
 telegram_app = None
@@ -200,7 +204,7 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Production'da o'zgartiring
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -214,14 +218,7 @@ async def root():
     return {
         "message": "Post-it Notes API + Telegram Bot",
         "status": "running",
-        "telegram_bot": "active" if telegram_app else "inactive",
-        "endpoints": {
-            "GET /api/notes": "Barcha savollar",
-            "POST /api/notes": "Yangi savol",
-            "DELETE /api/notes/{id}": "Savolni o'chirish",
-            "GET /api/stats": "Statistika",
-            "GET /health": "Server holati"
-        }
+        "telegram_bot": "active" if telegram_app else "inactive"
     }
 
 @app.get("/health")
@@ -233,9 +230,20 @@ async def health():
         "telegram_bot": "active" if telegram_app else "inactive"
     }
 
+@app.post("/api/check-password")
+async def check_password(data: PasswordCheck):
+    """Paroli tekshirish"""
+    if data.password == SECRET_PASSWORD:
+        return {"authorized": True, "message": "Parol to'g'ri"}
+    else:
+        raise HTTPException(status_code=401, detail="Parol noto'g'ri")
+
 @app.get("/api/notes", response_model=List[NoteResponse])
-async def get_notes():
-    """Barcha savollarni olish"""
+async def get_notes(password: str = None):
+    """Paroli tekshirib savollarni olish"""
+    if password != SECRET_PASSWORD:
+        raise HTTPException(status_code=401, detail="Parol talab qilinadi yoki noto'g'ri")
+    
     try:
         conn = get_db()
         cursor = conn.cursor()
@@ -277,8 +285,11 @@ async def create_note(note: NoteCreate):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/api/notes/{note_id}")
-async def delete_note(note_id: int):
-    """Savolni o'chirish"""
+async def delete_note(note_id: int, password: str = None):
+    """Savolni o'chirish (parol talab)"""
+    if password != SECRET_PASSWORD:
+        raise HTTPException(status_code=401, detail="Parol talab qilinadi yoki noto'g'ri")
+    
     try:
         conn = get_db()
         cursor = conn.cursor()
@@ -300,8 +311,11 @@ async def delete_note(note_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/stats")
-async def get_stats():
-    """Statistika"""
+async def get_stats(password: str = None):
+    """Statistika (parol talab)"""
+    if password != SECRET_PASSWORD:
+        raise HTTPException(status_code=401, detail="Parol talab qilinadi yoki noto'g'ri")
+    
     try:
         conn = get_db()
         cursor = conn.cursor()
@@ -342,6 +356,7 @@ if __name__ == "__main__":
     print(f"📝 API: http://localhost:{FASTAPI_PORT}")
     print(f"📚 Docs: http://localhost:{FASTAPI_PORT}/docs")
     print(f"🤖 Telegram Bot: Ishga tushmoqda...")
+    print(f"🔐 Parol: {SECRET_PASSWORD}")
     print("=" * 60)
     print("\n⚠️  MUHIM: TELEGRAM_BOT_TOKEN'ni o'zgartiring!\n")
     
