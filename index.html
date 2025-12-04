@@ -115,19 +115,24 @@
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
             overflow: hidden;
+            transform-style: preserve-3d;
+            perspective: 1000px;
         }
 
-        .note-card:hover {
-            transform: translateY(-5px);
+        .note-card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .note-card:hover:not(.flipped) {
+            transform: translateY(-5px) rotateY(0);
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
         }
 
-        .note-card.expanded {
-            transform: scale(1.05);
-            z-index: 10;
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+        .note-card.flipped:hover {
+            transform: rotateY(180deg) translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
         }
 
         .note-top {
@@ -149,6 +154,39 @@
         .note-content {
             position: relative;
             height: 100%;
+            backface-visibility: hidden;
+        }
+
+        .note-front, .note-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            left: 0;
+            top: 0;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            backface-visibility: hidden;
+        }
+
+        .note-front {
+            z-index: 2;
+            transform: rotateY(0deg);
+        }
+
+        .note-back {
+            transform: rotateY(180deg);
+        }
+
+        .note-title {
+            font-family: 'Comic Sans MS', cursive;
+            font-size: 22px;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+            margin-bottom: 15px;
         }
 
         .note-question {
@@ -157,30 +195,65 @@
             line-height: 1.6;
             color: #333;
             word-wrap: break-word;
-            transition: all 0.3s ease;
-        }
-
-        .note-question.collapsed {
-            display: -webkit-box;
-            -webkit-line-clamp: 4;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            text-align: center;
         }
 
         .note-timestamp {
             position: absolute;
-            bottom: 0;
+            bottom: 10px;
+            left: 0;
             right: 0;
+            text-align: center;
             font-size: 11px;
             color: rgba(0, 0, 0, 0.5);
             font-style: italic;
         }
 
+        .open-btn {
+            margin-top: 20px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(0, 0, 0, 0.2);
+            border-radius: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            font-size: 14px;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .open-btn:hover {
+            background: rgba(255, 255, 255, 0.5);
+            border-color: rgba(0, 0, 0, 0.3);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 30px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(0, 0, 0, 0.2);
+            border-radius: 50%;
+            color: #333;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.5);
+            transform: scale(1.1);
+        }
+
         .delete-btn {
             position: absolute;
-            top: -8px;
-            right: -8px;
+            bottom: 10px;
+            right: 10px;
             width: 32px;
             height: 32px;
             background: #ef4444;
@@ -188,7 +261,7 @@
             border: none;
             border-radius: 50%;
             cursor: pointer;
-            display: none;
+            display: flex;
             align-items: center;
             justify-content: center;
             font-size: 18px;
@@ -196,27 +269,9 @@
             z-index: 5;
         }
 
-        .note-card.expanded .delete-btn {
-            display: flex;
-        }
-
         .delete-btn:hover {
             background: #dc2626;
             transform: scale(1.1);
-        }
-
-        .expand-indicator {
-            position: absolute;
-            bottom: 5px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 20px;
-            color: rgba(0, 0, 0, 0.3);
-            transition: all 0.3s;
-        }
-
-        .note-card.expanded .expand-indicator {
-            transform: translateX(-50%) rotate(180deg);
         }
 
         /* Ranglar */
@@ -293,7 +348,7 @@
     <script>
         const API_URL = 'https://fastapi-production-db32.up.railway.app/api/notes';
         let expandedNoteId = null;
-        const noteColors = {}; // Har bir note uchun rangni saqlash
+        const noteColors = {};
 
         const colors = [
             'color-yellow', 'color-pink', 'color-cyan', 'color-orange',
@@ -322,28 +377,43 @@
             });
         }
 
+        function getNoteTitle(question) {
+            // Savolning birinchi 3-4 so'zini olamiz
+            const words = question.split(' ');
+            const titleWords = words.slice(0, 4);
+            let title = titleWords.join(' ');
+            
+            // Agar title juda qisqa bo'lsa, boshqa yondashuv
+            if (title.length < 15 && words.length > 4) {
+                title = words.slice(0, 6).join(' ');
+            }
+            
+            // Agar oxirida nuqta bo'lmasa, qo'shamiz
+            if (!title.endsWith('.')) {
+                title += '...';
+            }
+            
+            return title;
+        }
+
         function toggleNote(noteId) {
             const noteCard = document.querySelector(`[data-note-id="${noteId}"]`);
-            const question = noteCard.querySelector('.note-question');
             
             if (expandedNoteId === noteId) {
                 // Yopish
                 expandedNoteId = null;
-                noteCard.classList.remove('expanded');
-                question.classList.add('collapsed');
+                noteCard.classList.remove('flipped');
             } else {
                 // Oldingi ochilgan note'ni yopish
                 if (expandedNoteId) {
                     const prevCard = document.querySelector(`[data-note-id="${expandedNoteId}"]`);
                     if (prevCard) {
-                        prevCard.classList.remove('expanded');
-                        prevCard.querySelector('.note-question').classList.add('collapsed');
+                        prevCard.classList.remove('flipped');
                     }
                 }
                 // Yangi note'ni ochish
                 expandedNoteId = noteId;
-                noteCard.classList.add('expanded');
-                question.classList.remove('collapsed');
+                noteCard.classList.add('flipped');
             }
         }
 
@@ -383,20 +453,29 @@
             
             container.innerHTML = notes.map(note => {
                 const noteColor = getNoteColor(note.id);
+                const noteTitle = getNoteTitle(note.question);
+                
                 return `
                     <div class="note-card ${noteColor}" 
-                         data-note-id="${note.id}"
-                         onclick="toggleNote(${note.id})">
+                         data-note-id="${note.id}">
                         <div class="note-top">
                             <div class="note-petal"></div>
                             <div class="note-petal"></div>
                             <div class="note-petal"></div>
                         </div>
-                        <button class="delete-btn" onclick="deleteNote(event, ${note.id})">×</button>
-                        <div class="note-content">
-                            <p class="note-question collapsed">${escapeHtml(note.question)}</p>
+                        
+                        <!-- Old tomoni (yopiq) -->
+                        <div class="note-front" onclick="toggleNote(${note.id})">
+                            <div class="note-title">${escapeHtml(noteTitle)}</div>
+                            <button class="open-btn">Ochish uchun bosing</button>
+                        </div>
+                        
+                        <!-- Orqa tomoni (ochiq) -->
+                        <div class="note-back">
+                            <button class="close-btn" onclick="toggleNote(${note.id})">×</button>
+                            <div class="note-question">${escapeHtml(note.question)}</div>
                             <span class="note-timestamp">${formatDate(note.created_at || note.timestamp)}</span>
-                            <div class="expand-indicator">▼</div>
+                            <button class="delete-btn" onclick="deleteNote(event, ${note.id})">×</button>
                         </div>
                     </div>
                 `;
