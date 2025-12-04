@@ -109,61 +109,29 @@
         }
 
         .note-card {
-            position: relative;
-            min-height: 220px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            cursor: pointer;
-            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-            overflow: hidden;
-            transform-style: preserve-3d;
-        }
+    position: relative;
+    min-height: 220px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    overflow: hidden;
+    transform-style: preserve-3d;
 
-        .note-card.flipped {
-            transform: rotateY(180deg);
-        }
+    /* Default transform dynamic */
+    --card-transform: rotateY(0deg);
+    transform: var(--card-transform);
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 
-        .note-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-        }
+.note-card.flipped {
+    --card-transform: rotateY(180deg);
+}
 
-        .note-card.flipped:hover {
-            transform: rotateY(180deg) translateY(-5px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-        }
+.note-card:hover {
+    transform: var(--card-transform) translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
 
-        .note-top {
-            position: absolute;
-            top: -8px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 3px;
-            z-index: 3;
-        }
-
-        .note-petal {
-            width: 14px;
-            height: 20px;
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-        }
-
-        .note-front, .note-back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            left: 0;
-            top: 0;
-            padding: 25px;
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
 
         .note-front {
             z-index: 2;
@@ -381,25 +349,25 @@
         }
 
         function toggleNote(noteId) {
-            const noteCard = document.querySelector(`[data-note-id="${noteId}"]`);
-            
-            if (expandedNoteId === noteId) {
-                // Yopish - old tomonga qaytish
-                expandedNoteId = null;
-                noteCard.classList.remove('flipped');
-            } else {
-                // Oldingi ochilgan note'ni yopish
-                if (expandedNoteId) {
-                    const prevCard = document.querySelector(`[data-note-id="${expandedNoteId}"]`);
-                    if (prevCard) {
-                        prevCard.classList.remove('flipped');
-                    }
-                }
-                // Yangi note'ni ochish
-                expandedNoteId = noteId;
-                noteCard.classList.add('flipped');
-            }
+    const noteCard = document.querySelector(`[data-note-id="${noteId}"]`);
+    const noteInner = noteCard.querySelector('.note-inner'); // 🔥 MUHIM
+
+    if (expandedNoteId === noteId) {
+        expandedNoteId = null;
+        noteInner.classList.remove('flipped'); // 🔥 note-inner ga qo‘llanadi
+    } else {
+        // Oldingi ochilganini yopish
+        if (expandedNoteId) {
+            const prevCard = document.querySelector(`[data-note-id="${expandedNoteId}"]`);
+            const prevInner = prevCard?.querySelector('.note-inner');
+            prevInner?.classList.remove('flipped');
         }
+
+        expandedNoteId = noteId;
+        noteInner.classList.add('flipped'); // 🔥 aynan note-inner!
+    }
+    }
+
 
         async function deleteNote(event, noteId) {
             event.stopPropagation();
@@ -439,32 +407,41 @@
                 const noteColor = getNoteColorClass(note.id);
                 
                 return `
-                    <div class="note-card ${noteColor}" 
-                         data-note-id="${note.id}"
-                         onclick="if(!event.target.closest('.close-btn') && !event.target.closest('.delete-btn')) toggleNote(${note.id})">
-                        <div class="note-top">
-                            <div class="note-petal"></div>
-                            <div class="note-petal"></div>
-                            <div class="note-petal"></div>
-                        </div>
-                        
-                        <!-- Old tomoni (yopiq) - bo'sh -->
-                        <div class="note-front">
-                            <div class="note-front-content">
-                                <div class="note-front-title">???</div>
-                                <div class="note-front-hint">Savolni ko'rish uchun bosing</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Orqa tomoni (ochiq) - to'liq ma'lumot -->
-                        <div class="note-back">
-                            <button class="close-btn" onclick="toggleNote(${note.id})">×</button>
-                            <div class="note-question">${escapeHtml(note.question)}</div>
-                            <span class="note-timestamp">${formatDate(note.created_at || note.timestamp)}</span>
-                            <button class="delete-btn" onclick="deleteNote(event, ${note.id})">×</button>
-                        </div>
-                    </div>
-                `;
+    <div class="note-card ${noteColor}" 
+         data-note-id="${note.id}"
+         onclick="if(!event.target.closest('.close-btn') && !event.target.closest('.delete-btn')) toggleNote(${note.id})">
+        
+        <div class="note-top">
+            <div class="note-petal"></div>
+            <div class="note-petal"></div>
+            <div class="note-petal"></div>
+        </div>
+
+        <!-- 🔥 NOTE-INNER qo'shildi -->
+        <div class="note-inner">
+
+            <!-- Old tomoni -->
+            <div class="note-front">
+                <div class="note-front-content">
+                    <div class="note-front-title">???</div>
+                    <div class="note-front-hint">Savolni ko'rish uchun bosing</div>
+                </div>
+            </div>
+
+            <!-- Orqa tomoni -->
+            <div class="note-back">
+                <button class="close-btn" onclick="toggleNote(${note.id})">×</button>
+                <div class="note-question">${escapeHtml(note.question)}</div>
+                <span class="note-timestamp">${formatDate(note.created_at || note.timestamp)}</span>
+                <button class="delete-btn" onclick="deleteNote(event, ${note.id})">×</button>
+            </div>
+
+        </div>
+        <!-- 🔥 note-inner tugadi -->
+
+    </div>
+    `;
+
             }).join('');
         }
 
