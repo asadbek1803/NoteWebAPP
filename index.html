@@ -458,7 +458,7 @@
                         
                         <!-- Orqa tomoni (ochiq) - to'liq ma'lumot -->
                         <div class="note-back">
-                            <button class="close-btn" onclick="toggleNote(${note.id})">×</button>
+                            <button class="close-btn" onclick="toggleNote(${note.id}); event.stopPropagation();">×</button>
                             <div class="note-question">${escapeHtml(note.question)}</div>
                             <span class="note-timestamp">${formatDate(note.created_at || note.timestamp)}</span>
                             <button class="delete-btn" onclick="deleteNote(event, ${note.id})">×</button>
