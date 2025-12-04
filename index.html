@@ -330,8 +330,8 @@
 
     <script>
         const API_URL = 'https://fastapi-production-db32.up.railway.app/api/notes';
-        let expandedNoteId = null;
         const noteColors = {};
+        const openNotes = new Set(); // Ochilgan cardlarni saqlash
 
         const colorClasses = [
             'random-color-1', 'random-color-2', 'random-color-3', 'random-color-4',
@@ -366,17 +366,11 @@
             const noteCard = document.querySelector(`[data-note-id="${noteId}"]`);
             const noteInner = noteCard.querySelector('.note-inner');
 
-            if (expandedNoteId === noteId) {
-                expandedNoteId = null;
+            if (openNotes.has(noteId)) {
+                openNotes.delete(noteId);
                 noteInner.classList.remove('flipped');
             } else {
-                if (expandedNoteId) {
-                    const prevCard = document.querySelector(`[data-note-id="${expandedNoteId}"]`);
-                    const prevInner = prevCard?.querySelector('.note-inner');
-                    prevInner?.classList.remove('flipped');
-                }
-
-                expandedNoteId = noteId;
+                openNotes.add(noteId);
                 noteInner.classList.add('flipped');
             }
         }
@@ -395,6 +389,7 @@
 
                 if (response.ok) {
                     delete noteColors[noteId];
+                    openNotes.delete(noteId);
                     loadNotes();
                 } else {
                     showError('Savolni o\'chirishda xatolik yuz berdi');
@@ -417,13 +412,14 @@
             
             container.innerHTML = notes.map(note => {
                 const noteColor = getNoteColorClass(note.id);
+                const isOpen = openNotes.has(note.id);
                 
                 return `
                     <div class="note-card ${noteColor}" 
                          data-note-id="${note.id}"
                          onclick="if(!event.target.closest('.close-btn') && !event.target.closest('.delete-btn')) toggleNote(${note.id})">
                         
-                        <div class="note-inner">
+                        <div class="note-inner ${isOpen ? 'flipped' : ''}">
                             <!-- Old tomoni -->
                             <div class="note-front">
                                 <div class="note-front-content">
@@ -434,7 +430,7 @@
 
                             <!-- Orqa tomoni -->
                             <div class="note-back">
-                                <button class="close-btn" onclick="toggleNote(${note.id})">×</button>
+                                <button class="close-btn" onclick="toggleNote(${note.id}); event.stopPropagation();">×</button>
                                 <div class="note-question">${escapeHtml(note.question)}</div>
                                 <span class="note-timestamp">${formatDate(note.created_at || note.timestamp)}</span>
                                 <button class="delete-btn" onclick="deleteNote(event, ${note.id})">×</button>
